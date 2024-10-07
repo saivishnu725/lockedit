@@ -5,70 +5,72 @@
 # Website: theunconcernedape.me
 # Github: https://github.com/saivishnu725/lockedit
 
+# version option
+VERSION(){
+    echo "$0 v2.0" >&2
+    exit 0
+}
+
+# help option
+HELP(){
+    echo "
+    Usage: lockedit [options] [arguments]
+    -f, --file:         input file
+    -q, --quiet:        quiet outputs
+    -v, --version:      version
+    -c, --config:       configuration file
+    -p, --pass:         use password for this file
+    -t, --toggle:       toggles the file between mutable and immutable settings
+    -l, --list:         lists all the files that are managed by lockedit
+    -h, --help:         help menu
+    -i, --interactive:  list of all the files to easily toggle
+    -g, --get:          prints all the important variables with its value
+    "
+    exit 0
+}
+
+
+# TODO: arguments
+# long options
+shift $((OPTIND - 1))
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --file) FILE="$2"; shift 2 ;;
+    --version) VERSION; shift 0;;
+    --config) CONFIG_FILE="$2"; shift 2 ;;
+    --help) HELP; shift 0;;
+    *) echo "Unknown option: $1" >&2; exit 1 ;;
+  esac
+done
+# short options
+while getopts "f:vc:h" opt; do
+  case $opt in
+    f) FILE="$OPTARG" ;;
+    v) VERSION;;
+    c) CONFIG_FILE="$OPTARG" ;;
+    h) HELP;;
+    \?) echo "Invalid option: -$OPTARG" >&2; exit 1 ;;
+    :) echo "Option -$OPTARG requires an argument." >&2; exit 1 ;;
+  esac
+done
+
+# TODO: make file immutable without editing
+# TODO: make file mutable without editing
+# TODO: quiet mode
+# TODO: error/edge case handling
+
 # load config
-USER_CONFIG_FILE="$HOME/.config/lockedit/lockedit.conf"
-GLOBAL_CONFIG_FILE="/etc/lockedit/lockedit.conf"
-# TODO: make config file template and save it in the path. use it to make more stuff happen
-if [ -f "$USER_CONFIG_FILE" ]; then
-    . "$USER_CONFIG_FILE"
-
-    echo "Using user configuration file: $USER_CONFIG_FILE"
-elif [ -f "$GLOBAL_CONFIG_FILE" ]; then
-    . "$GLOBAL_CONFIG_FILE"
-    echo "Using global configuration file: $GLOBAL_CONFIG_FILE"
-else
-    echo "No configuration file found. Please ensure that either $USER_CONFIG_FILE or $GLOBAL_CONFIG_FILE exists."
-    exit 1
-fi
-
-# check if filename is provided
-if [ -z "$1" ]; then
-	echo "Usage: $0 <file_path>"
-	exit 1
-fi
-
-# file to edit
-FILE="$1"
-# program name
-PROG_NAME="lockedit"
-# directory to store list
-LOG_DIR="/etc/$PROG_NAME"
-# log file
-LOG_FILE="$LOG_DIR/list"
+load_config "$CONFIG_FILE"
 
 # check if the file exists
-if [ ! -f "$FILE" ]; then
-	echo "Error: File $FILE does not exist."
-	exit 1
-fi
-
-# create directory and log file if it does not exists, ensure it is accessible
-sudo mkdir -p "$LOG_DIR"
-sudo touch "$LOG_FILE"
-sudo chmod 644 "$LOG_FILE"
-
-echo "editor: $EDITOR "
-
-# check if $EDITOR is set
-if [ -z "$EDITOR" ]; then
-    echo "\$EDITOR is not set. Checking for available editors..."
-
-    # list of potential editors
-    EDITORS=("nano" "vim" "nvim" "vi" "emacs" "gedit")
-    for editor in "${EDITORS[@]}"; do
-        if command -v "$editor" &> /dev/null; then
-            echo "Using $editor as the editor."
-            EDITOR="$editor"
-            break
-        fi
-    done
-
-    # check if an editor was found
-    if [ -z "$EDITOR" ]; then
-        echo "No available text editors found."
-        echo "Please set your \$EDITOR variable in your .bashrc or .zshrc and rerun the program."
-        exit 1
-    fi
+if [[ -z $FILE ]]; then
+  echo "Error: File path is required." >&2
+  exit 1
+elif [[ ! -f $FILE ]]; then
+  echo "Error: File does not exist: $FILE" >&2
+  exit 1
+else
+  echo "File: $FILE"
 fi
 
 # remove immutable flag
